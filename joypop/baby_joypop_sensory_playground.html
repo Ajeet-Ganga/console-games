@@ -1,0 +1,2071 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Baby JoyPop — Sensory Playground</title>
+  <style>
+    :root {
+      --primary: #ff6b8b;
+      --secondary: #6bc5ff;
+      --accent: #ffd166;
+      --green: #06d6a0;
+      --card-bg: rgba(255, 255, 255, 0.94);
+      --font-family: 'Comic Sans MS', 'Chalkboard SE', 'Nunito', system-ui, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #fdfbf7;
+      font-family: var(--font-family);
+    }
+
+    #canvas-container {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* TOP STATUS & PARENT CONTROLS */
+    #top-bar {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      right: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 20;
+      pointer-events: none;
+    }
+
+    .status-badge {
+      pointer-events: auto;
+      background: var(--card-bg);
+      backdrop-filter: blur(8px);
+      padding: 8px 16px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 800;
+      color: #334155;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+      border: 2px solid rgba(255, 255, 255, 0.85);
+      transition: all 0.2s ease;
+    }
+
+    .pulse-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #94a3b8;
+      transition: background 0.3s;
+    }
+
+    .pulse-dot.connected {
+      background: var(--green);
+      box-shadow: 0 0 10px var(--green);
+    }
+
+    .sensory-stage-badge {
+      pointer-events: auto;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      color: #047857;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+      border: 1.5px solid #a7f3d0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.3s ease;
+    }
+
+    .icon-btn {
+      pointer-events: auto;
+      background: var(--card-bg);
+      border: 2px solid rgba(255, 255, 255, 0.9);
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      cursor: pointer;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+      transition: transform 0.15s;
+    }
+
+    .icon-btn:hover {
+      transform: scale(1.06);
+    }
+
+    .icon-btn:active {
+      transform: scale(0.92);
+    }
+
+    /* PAUSE OVERLAY & RESUME */
+    #pause-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.4);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 95;
+      padding: 16px;
+    }
+
+    .pause-box {
+      background: rgba(255, 255, 255, 0.96);
+      border-radius: 26px;
+      padding: 28px 34px;
+      text-align: center;
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.22);
+      border: 3px solid rgba(255, 255, 255, 0.95);
+      max-width: 440px;
+    }
+
+    .btn-resume {
+      background: linear-gradient(135deg, var(--green), #05b386);
+      color: white;
+      border: none;
+      padding: 13px 30px;
+      border-radius: 999px;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 6px 18px rgba(6, 214, 160, 0.35);
+      transition: transform 0.15s;
+    }
+
+    .btn-resume:hover {
+      transform: scale(1.05);
+    }
+
+    /* SOUND UNLOCK NOTIFICATION BANNER */
+    #sound-banner {
+      position: absolute;
+      top: 72px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, #ff6b8b, #ff8fa3);
+      color: #ffffff;
+      padding: 9px 22px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 800;
+      box-shadow: 0 6px 20px rgba(255, 107, 139, 0.4);
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: opacity 0.3s, transform 0.3s;
+      animation: gentle-bounce 2s infinite ease-in-out;
+    }
+
+    @keyframes gentle-bounce {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50% { transform: translateX(-50%) translateY(-4px); }
+    }
+
+    #baby-prompt {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(8px);
+      padding: 10px 24px;
+      border-radius: 999px;
+      font-size: 15px;
+      font-weight: 800;
+      color: #475569;
+      pointer-events: none;
+      z-index: 15;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    /* PARENT CONFIG MODAL */
+    #settings-modal {
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.55);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 16px;
+    }
+
+    .modal-box {
+      background: #ffffff;
+      border-radius: 24px;
+      width: 100%;
+      max-width: 560px;
+      max-height: 88vh;
+      overflow-y: auto;
+      padding: 24px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.22);
+      border: 3px solid #e2e8f0;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 2px dashed #e2e8f0;
+    }
+
+    .modal-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: #1e293b;
+    }
+
+    .close-btn {
+      background: #f1f5f9;
+      border: none;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      font-size: 18px;
+      font-weight: bold;
+      color: #64748b;
+      cursor: pointer;
+    }
+
+    .settings-section {
+      margin-bottom: 16px;
+      background: #f8fafc;
+      border-radius: 14px;
+      padding: 14px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .settings-section h3 {
+      font-size: 14px;
+      color: #334155;
+      margin-bottom: 10px;
+    }
+
+    .setting-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      font-size: 13px;
+      color: #475569;
+    }
+
+    .setting-row:last-child {
+      margin-bottom: 0;
+    }
+
+    select, input[type="range"], input[type="file"] {
+      font-family: inherit;
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1.5px solid #cbd5e1;
+      background: #fff;
+      color: #1e293b;
+    }
+
+    .theme-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .theme-btn {
+      border: 2px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      background: #fff;
+      transition: all 0.15s;
+    }
+
+    .theme-btn.active {
+      border-color: var(--primary);
+      background: #fff0f5;
+      color: var(--primary);
+      box-shadow: 0 2px 8px rgba(255, 107, 139, 0.2);
+    }
+
+    .btn-done {
+      width: 100%;
+      background: linear-gradient(135deg, var(--primary), #ff8fa3);
+      color: white;
+      border: none;
+      padding: 13px;
+      border-radius: 14px;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 6px 16px rgba(255, 107, 139, 0.3);
+    }
+  </style>
+</head>
+<body>
+
+  <div id="canvas-container">
+    <canvas id="babyCanvas"></canvas>
+  </div>
+
+  <div id="top-bar">
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <div class="status-badge" id="joystick-status">
+        <div class="pulse-dot" id="dot-indicator"></div>
+        <span id="gamepad-label">🎮 Move Joystick or Touch Screen</span>
+      </div>
+      <div class="sensory-stage-badge" id="sensory-status-badge" title="Toddler Sensory Soother status">
+        <span id="sensory-badge-icon">🌿</span>
+        <span id="sensory-badge-text">Normal (1:1)</span>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 8px;">
+      <button class="icon-btn" id="btn-pause-toggle" title="Pause / Resume Game (Esc)">⏸️</button>
+      <button class="icon-btn" id="btn-audio-toggle" title="Sound Mute/Unmute">🎵</button>
+      <button class="icon-btn" id="btn-parent-config" title="Settings (Parent Menu)">⚙️</button>
+    </div>
+  </div>
+
+  <div id="sound-banner" title="Click or tap to ensure music is playing!">
+    <span>🎵 Tap or Push Joystick to Start Music! ✨</span>
+  </div>
+
+  <div id="baby-prompt">
+    <span>✨ Push Joystick, Tilt or Touch the Screen! 🎈</span>
+  </div>
+
+  <!-- PAUSE MODAL OVERLAY -->
+  <div id="pause-overlay">
+    <div class="pause-box">
+      <div style="font-size: 52px; margin-bottom: 6px;">⏸️✨</div>
+      <div style="font-size: 24px; font-weight: 900; color: #1e293b; margin-bottom: 6px;">Playground Paused</div>
+      <div style="font-size: 14px; font-weight: 700; color: #64748b; margin-bottom: 18px;">
+        Rest your hands! Tap below, press Esc, or click to resume.
+      </div>
+      <button class="btn-resume" id="btn-resume-overlay">▶️ Resume Playing! 🎈</button>
+    </div>
+  </div>
+
+  <!-- PARENT SETTINGS MODAL -->
+  <div id="settings-modal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title">🧸 Parent Settings</div>
+        <button class="close-btn" id="btn-close-modal">✕</button>
+      </div>
+
+      <!-- 1. GENTLE MUSIC CONFIG -->
+      <div class="settings-section">
+        <h3>🎵 Gentle Lullaby & Music</h3>
+        <div class="setting-row">
+          <label>Background Song:</label>
+          <select id="cfg-melody">
+            <option value="pentatonic" selected>Dreamy Pentatonic (Warm Bells)</option>
+            <option value="twinkle">Twinkle Star (Celesta)</option>
+            <option value="brahms">Cradle Song (Soft Chime)</option>
+            <option value="waves">Ocean Breeze & Chimes</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <label>Music Volume (Default 20%):</label>
+          <input type="range" id="cfg-music-vol" min="0" max="100" value="20">
+        </div>
+        <div class="setting-row">
+          <label>Music Tempo:</label>
+          <select id="cfg-tempo">
+            <option value="very_slow">Slow & Sleepy (Calming)</option>
+            <option value="slow" selected>Gentle Lullaby (Standard)</option>
+            <option value="playful">Playful Daytime</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 2. BACKGROUND SCENERY & IMAGE UPLOAD -->
+      <div class="settings-section">
+        <h3>🎨 Visual Theme & Custom Picture</h3>
+        <label style="font-size:12px; color:#64748b;">Preset Backgrounds & Themed Elements:</label>
+        <div class="theme-grid">
+          <button class="theme-btn active" data-theme="pastel_sky">☁️ Pastel Sky</button>
+          <button class="theme-btn" data-theme="starry_night">🌙 Cozy Stars</button>
+          <button class="theme-btn" data-theme="meadow">🌻 Sun Meadow</button>
+          <button class="theme-btn" data-theme="ocean">🐬 Gentle Sea</button>
+          <button class="theme-btn" data-theme="cotton_candy">🍬 Sweet Pink</button>
+          <button class="theme-btn" data-theme="lavender">💜 Lavender</button>
+        </div>
+        <div style="margin-top: 12px;">
+          <label style="font-size: 12px; color:#475569; display:block; margin-bottom:4px;">Upload Custom Picture (Family photo / baby cartoon):</label>
+          <input type="file" id="cfg-bg-upload" accept="image/*" style="width:100%;">
+        </div>
+      </div>
+
+      <!-- 3. SENSORY & CLUTTER SETTINGS -->
+      <div class="settings-section">
+        <h3>⭐ Emojis, Sounds & Motion</h3>
+        <div class="setting-row">
+          <label>Landscape Simulation:</label>
+          <select id="cfg-landscape-motion">
+            <option value="gentle" selected>Gentle Gliding Landscape (Passing Panorama)</option>
+            <option value="calm">Very Slow & Sleepy Drift</option>
+            <option value="off">Static (No Motion)</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <label>Emoji Emission Rate: <span id="lbl-emoji-rate" style="font-weight: 800; color: var(--primary);">1:10 (Default)</span></label>
+          <input type="range" id="cfg-emoji-rate" min="5" max="25" value="10" style="width: 140px;">
+        </div>
+        <div class="setting-row">
+          <label>Movement Light Bursts: <span id="lbl-light-rate" style="font-weight: 800; color: var(--primary);">1:10 (Default)</span></label>
+          <input type="range" id="cfg-light-rate" min="5" max="25" value="10" style="width: 140px;">
+        </div>
+        <div class="setting-row">
+          <label>Emoji Rate Limiter: <span id="lbl-emoji-limit" style="font-weight: 800; color: var(--primary);">333ms (~3.0/s - Default)</span></label>
+          <input type="range" id="cfg-emoji-limit" min="40" max="800" step="10" value="333" style="width: 140px;">
+        </div>
+        <div class="setting-row">
+          <label>Light Burst Rate Limiter: <span id="lbl-light-limit" style="font-weight: 800; color: var(--primary);">333ms (~3.0/s - Default)</span></label>
+          <input type="range" id="cfg-light-limit" min="80" max="1200" step="10" value="333" style="width: 140px;">
+        </div>
+        <div class="setting-row">
+          <label>Visual Density:</label>
+          <select id="cfg-density">
+            <option value="calm" selected>Calm & Peaceful (Fewer Elements)</option>
+            <option value="normal">Normal Sensory Playground</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <label>Auto-Pause on Focus Loss:</label>
+          <select id="cfg-blur-pause">
+            <option value="on" selected>Enabled (Pause on tab switch / click away)</option>
+            <option value="off">Disabled (Keep playing in background)</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <label>Gyroscope Tilt Control:</label>
+          <select id="cfg-gyro">
+            <option value="on" selected>Enabled (Gamepad & Tilt Sensors)</option>
+            <option value="off">Disabled (Joysticks & Touch Only)</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <label>Emoji Pack:</label>
+          <select id="cfg-emoji-pack">
+            <option value="animals" selected>Cute Animals (🐶, 🐱, 🐼, 🐰)</option>
+            <option value="toys">Toys & Sweets (🧸, 🎈, 🍭, 🚗)</option>
+            <option value="stars">Celestial Sky (🌟, 🌙, ☀️, 🌈)</option>
+            <option value="all">Rainbow Mix (All Icons)</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <label>Pop Sound Style:</label>
+          <select id="cfg-sfx-type">
+            <option value="marimba" selected>Harmonic Wooden Marimba</option>
+            <option value="celesta">Gentle Music Box Bells</option>
+            <option value="bubbles">Soft Popping Bubbles</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 4. TODDLER SENSORY SOOTHER (AUTO-DESENSITIZATION) -->
+      <div class="settings-section">
+        <h3>🌿 Sensory Soother (Auto-Desensitization)</h3>
+        <div style="font-size: 12px; color: #64748b; margin-bottom: 8px;">
+          Gently lowers interaction frequency as baby plays repeatedly to prevent sensory overstimulation.
+        </div>
+        <div class="setting-row">
+          <label>Sensory Soother Mode:</label>
+          <select id="cfg-desensitize-toggle">
+            <option value="on" selected>Enabled (Auto-Calm Active)</option>
+            <option value="off">Disabled (Fixed Rate)</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <label>Stage 1 Limit: <span id="lbl-desens-t1" style="font-weight: 800; color: var(--primary);">5 Touches (Default)</span></label>
+          <input type="range" id="cfg-desens-t1" min="2" max="15" value="5" style="width: 140px;">
+        </div>
+        <div class="setting-row">
+          <label>Stage 2 Window (1/3rd Rate): <span id="lbl-desens-t2" style="font-weight: 800; color: var(--primary);">10 Touches (Default)</span></label>
+          <input type="range" id="cfg-desens-t2" min="4" max="25" value="10" style="width: 140px;">
+        </div>
+        <div class="setting-row">
+          <label>Current Calming Stage:</label>
+          <span id="lbl-desens-current" style="font-weight: 800; color: #047857;">🌿 Stage 1: Active Play (1x)</span>
+        </div>
+      </div>
+
+      <button class="btn-done" id="btn-save-modal">Save & Keep Playing! 🎈</button>
+    </div>
+  </div>
+
+<script>
+// Full rainbow spectrum of vivid, cheerful toddler colors
+const POP_COLORS = [
+  '#ff0055', '#ff3300', '#ff6600', '#ff9900', '#ffcc00', '#ffee00',
+  '#b2ff00', '#00ff66', '#00ffcc', '#00e5ff', '#0099ff', '#3d5afe',
+  '#7c4dff', '#b800ff', '#f50057', '#ff1744', '#00e676', '#ffea00'
+];
+
+const EMOJI_SETS = {
+  animals: ['🐶', '🐱', '🐼', '🦁', '🐰', '🦊', '🐻', '🐥', '🦄', '🐨', '🐸', '🦆'],
+  toys: ['🧸', '🎈', '🍭', '🍦', '🚗', '🚂', '🚁', '🍓', '🧁', '⚽', '🎺', '🎁'],
+  stars: ['🌟', '⭐', '🌙', '☀️', '🌈', '☁️', '✨', '🪐', '🌸', '🌼', '🍎', '💖'],
+  all: ['🐶', '🐱', '🧸', '🎈', '🌟', '🦄', '🌈', '🍦', '🚗', '🐥', '🍭', '🌸', '🌙']
+};
+
+const THEME_ELEMENTS = {
+  pastel_sky: [
+    { emoji: '🎈', name: 'Balloon', sound: 'balloon', color: '#ff6b8b' },
+    { emoji: '☁️', name: 'Cloud', sound: 'cloud', color: '#93c5fd' },
+    { emoji: '🌈', name: 'Rainbow', sound: 'rainbow', color: '#fbcfe8' },
+    { emoji: '🪁', name: 'Kite', sound: 'kite', color: '#ffd166' }
+  ],
+  starry_night: [
+    { emoji: '⭐', name: 'Star', sound: 'star', color: '#fef08a' },
+    { emoji: '🌙', name: 'Moon', sound: 'moon', color: '#bfdbfe' },
+    { emoji: '🪐', name: 'Planet', sound: 'planet', color: '#f472b6' },
+    { emoji: '🚀', name: 'Rocket', sound: 'rocket', color: '#60a5fa' }
+  ],
+  meadow: [
+    { emoji: '🌻', name: 'Sunflower', sound: 'sunflower', color: '#facc15' },
+    { emoji: '🐝', name: 'Bumblebee', sound: 'bee', color: '#fde047' },
+    { emoji: '🦋', name: 'Butterfly', sound: 'butterfly', color: '#a78bfa' },
+    { emoji: '🐸', name: 'Froggy', sound: 'frog', color: '#4ade80' }
+  ],
+  ocean: [
+    { emoji: '🐬', name: 'Dolphin', sound: 'dolphin', color: '#38bdf8' },
+    { emoji: '🫧', name: 'Bubble', sound: 'bubble', color: '#bae6fd' },
+    { emoji: '🐙', name: 'Octopus', sound: 'octopus', color: '#f43f5e' },
+    { emoji: '⛵', name: 'Sailboat', sound: 'boat', color: '#fb923c' }
+  ],
+  cotton_candy: [
+    { emoji: '🍭', name: 'Lollipop', sound: 'lollipop', color: '#f472b6' },
+    { emoji: '🧁', name: 'Cupcake', sound: 'cupcake', color: '#fb7185' },
+    { emoji: '🍓', name: 'Strawberry', sound: 'fruit', color: '#ef4444' },
+    { emoji: '🍦', name: 'Ice Cream', sound: 'icecream', color: '#fef08a' }
+  ],
+  lavender: [
+    { emoji: '🌸', name: 'Blossom', sound: 'blossom', color: '#e879f9' },
+    { emoji: '🦄', name: 'Unicorn', sound: 'unicorn', color: '#c084fc' },
+    { emoji: '🧚', name: 'Fairy', sound: 'fairy', color: '#818cf8' },
+    { emoji: '🕊️', name: 'Dove', sound: 'dove', color: '#e2e8f0' }
+  ]
+};
+
+const THEMES = {
+  pastel_sky: { type: 'gradient', c1: '#e0f2fe', c2: '#fce7f3', ambient: '☁️' },
+  starry_night: { type: 'gradient', c1: '#1e1b4b', c2: '#312e81', ambient: '✨' },
+  meadow: { type: 'gradient', c1: '#ecfdf5', c2: '#d1fae5', ambient: '🌼' },
+  ocean: { type: 'gradient', c1: '#e0f2fe', c2: '#bae6fd', ambient: '🫧' },
+  cotton_candy: { type: 'gradient', c1: '#fdf2f8', c2: '#fbcfe8', ambient: '💖' },
+  lavender: { type: 'gradient', c1: '#f5f3ff', c2: '#ede9fe', ambient: '🌸' }
+};
+
+class BabyAudioEngine {
+  constructor() {
+    this.ctx = null;
+    this.masterGain = null;
+    this.musicGain = null;
+    this.sfxGain = null;
+    this.isMuted = false;
+    this.isPlayingMusic = false;
+    this.timer = null;
+    this.noteIndex = 0;
+
+    // Config options: Default volume reduced to 0.20 (20%)
+    this.musicVol = 0.20;
+    this.tempoInterval = 780;
+    this.melodyType = 'pentatonic';
+    this.sfxStyle = 'marimba';
+
+    this.pentatonicNotes = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25];
+
+    this.melodies = {
+      twinkle: [
+        261.63, 261.63, 392.00, 392.00, 440.00, 440.00, 392.00, 0,
+        349.23, 349.23, 329.63, 329.63, 293.66, 293.66, 261.63, 0
+      ],
+      pentatonic: [
+        261.63, 329.63, 392.00, 440.00, 523.25, 440.00, 392.00, 329.63,
+        293.66, 329.63, 392.00, 523.25, 659.25, 523.25, 440.00, 392.00
+      ],
+      brahms: [
+        329.63, 329.63, 392.00, 0, 329.63, 329.63, 392.00, 0,
+        329.63, 392.00, 523.25, 493.88, 440.00, 440.00, 392.00, 0
+      ],
+      waves: [
+        196.00, 261.63, 329.63, 392.00, 523.25, 392.00, 329.63, 261.63
+      ]
+    };
+  }
+
+  async init() {
+    try {
+      if (!this.ctx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        this.ctx = new AudioContextClass();
+
+        this.masterGain = this.ctx.createGain();
+        this.masterGain.gain.setValueAtTime(1.0, this.ctx.currentTime);
+        this.masterGain.connect(this.ctx.destination);
+
+        this.musicGain = this.ctx.createGain();
+        this.musicGain.gain.setValueAtTime(this.musicVol, this.ctx.currentTime);
+        this.musicGain.connect(this.masterGain);
+
+        this.sfxGain = this.ctx.createGain();
+        this.sfxGain.gain.setValueAtTime(0.45, this.ctx.currentTime);
+        this.sfxGain.connect(this.masterGain);
+      }
+
+      // Ensure AudioContext is immediately resumed on this gesture
+      if (this.ctx && this.ctx.state === 'suspended') {
+        await this.ctx.resume();
+      }
+
+      // Hide sound banner once unlocked
+      const banner = document.getElementById('sound-banner');
+      if (banner && this.ctx && this.ctx.state === 'running') {
+        banner.style.opacity = '0';
+        setTimeout(() => { banner.style.display = 'none'; }, 300);
+      }
+
+      this.startMusic();
+    } catch (e) {
+      console.warn('AudioContext initialization waiting for interaction:', e);
+    }
+  }
+
+  startMusic() {
+    if (this.isPlayingMusic || isPaused) return;
+    this.isPlayingMusic = true;
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+    if (this.musicGain && this.ctx) {
+      this.musicGain.gain.setValueAtTime(this.musicVol, this.ctx.currentTime);
+    }
+    this.noteIndex = 0;
+    this.stepMelody();
+  }
+
+  pauseMusic() {
+    this.isPlayingMusic = false;
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+    if (this.musicGain && this.ctx) {
+      this.musicGain.gain.setValueAtTime(0, this.ctx.currentTime);
+    }
+  }
+
+  resumeMusic() {
+    if (this.isPlayingMusic || isPaused) return;
+    this.isPlayingMusic = true;
+    if (this.musicGain && this.ctx) {
+      this.musicGain.gain.setValueAtTime(this.musicVol, this.ctx.currentTime);
+    }
+    this.stepMelody();
+  }
+
+  stepMelody() {
+    if (!this.isPlayingMusic || isPaused) return;
+
+    // If context is still suspended, retry rapidly once browser unlocks it
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.timer = setTimeout(() => this.stepMelody(), 150);
+      return;
+    }
+
+    const list = this.melodies[this.melodyType] || this.melodies.pentatonic;
+    const freq = list[this.noteIndex % list.length];
+    this.noteIndex++;
+
+    if (freq > 0 && !this.isMuted && !isPaused) {
+      this.playGentleLullabyChime(freq);
+    }
+    this.timer = setTimeout(() => this.stepMelody(), this.tempoInterval);
+  }
+
+  playGentleLullabyChime(freq) {
+    if (!this.ctx || isPaused) return;
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume();
+      return;
+    }
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const subOsc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    subOsc.type = 'triangle';
+    osc.frequency.setValueAtTime(freq, now);
+    subOsc.frequency.setValueAtTime(freq * 2, now);
+
+    const noteDuration = (this.tempoInterval / 1000) * 1.8;
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.14, now + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + noteDuration);
+
+    osc.connect(gain);
+    subOsc.connect(gain);
+    gain.connect(this.musicGain);
+
+    osc.start(now);
+    subOsc.start(now);
+    osc.stop(now + noteDuration);
+    subOsc.stop(now + noteDuration);
+  }
+
+  playJoyEffect(pitchOffset = 0) {
+    if (isPaused) return;
+    if (!this.ctx) this.init();
+    if (!this.ctx || this.isMuted) return;
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+
+    const now = this.ctx.currentTime;
+    const baseIdx = Math.floor(Math.random() * this.pentatonicNotes.length);
+    const chosenFreq = this.pentatonicNotes[baseIdx] * Math.pow(2, pitchOffset);
+
+    if (this.sfxStyle === 'bubbles') {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(chosenFreq * 0.7, now);
+      osc.frequency.exponentialRampToValueAtTime(chosenFreq * 1.5, now + 0.12);
+      gain.gain.setValueAtTime(0.25, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+      osc.start(now);
+      osc.stop(now + 0.15);
+    } else {
+      const osc = this.ctx.createOscillator();
+      const overtone = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = this.sfxStyle === 'celesta' ? 'sine' : 'triangle';
+      overtone.type = 'sine';
+      osc.frequency.setValueAtTime(chosenFreq, now);
+      overtone.frequency.setValueAtTime(chosenFreq * 3, now);
+      gain.gain.setValueAtTime(0.28, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+      osc.connect(gain);
+      overtone.connect(gain);
+      gain.connect(this.sfxGain);
+      osc.start(now);
+      overtone.start(now);
+      osc.stop(now + 0.45);
+      overtone.stop(now + 0.45);
+    }
+  }
+
+  playMoveChime() {
+    if (isPaused) return;
+    if (!this.ctx) this.init();
+    if (!this.ctx || this.isMuted) return;
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    const note = this.pentatonicNotes[Math.floor(Math.random() * this.pentatonicNotes.length)];
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(note, now);
+    g.gain.setValueAtTime(0.08, now);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+    osc.connect(g);
+    g.connect(this.sfxGain);
+    osc.start(now);
+    osc.stop(now + 0.23);
+  }
+
+  playThemedElementSound(type) {
+    if (!this.ctx) this.init();
+    if (!this.ctx || this.isMuted) return;
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    const note = this.pentatonicNotes[Math.floor(Math.random() * this.pentatonicNotes.length)];
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(note, now);
+    g.gain.setValueAtTime(0.08, now);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+    osc.connect(g);
+    g.connect(this.sfxGain);
+    osc.start(now);
+    osc.stop(now + 0.23);
+  }
+
+  playThemedElementSound(type) {
+    if (isPaused) return;
+    if (!this.ctx || this.isMuted) return;
+    const now = this.ctx.currentTime;
+    const createOscGain = (wave = 'sine', out = this.sfxGain) => {
+      const osc = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      osc.type = wave;
+      osc.connect(g);
+      g.connect(out);
+      return { osc, g };
+    };
+
+    switch (type) {
+      case 'balloon': {
+        const { osc, g } = createOscGain('sine');
+        osc.frequency.setValueAtTime(260, now);
+        osc.frequency.exponentialRampToValueAtTime(740, now + 0.22);
+        g.gain.setValueAtTime(0.28, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+        osc.start(now);
+        osc.stop(now + 0.25);
+        break;
+      }
+      case 'cloud': {
+        const { osc, g } = createOscGain('triangle');
+        osc.frequency.setValueAtTime(330, now);
+        g.gain.setValueAtTime(0.2, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+        osc.start(now);
+        osc.stop(now + 0.46);
+        break;
+      }
+      case 'rainbow': {
+        const chord = [392, 493.88, 587.33, 659.25, 783.99];
+        chord.forEach((freq, idx) => {
+          const t = now + idx * 0.05;
+          const { osc, g } = createOscGain('sine');
+          osc.frequency.setValueAtTime(freq, t);
+          g.gain.setValueAtTime(0.2, t);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+          osc.start(t);
+          osc.stop(t + 0.36);
+        });
+        break;
+      }
+      case 'bee': {
+        const { osc, g } = createOscGain('sawtooth');
+        osc.frequency.setValueAtTime(240, now);
+        osc.frequency.linearRampToValueAtTime(320, now + 0.12);
+        osc.frequency.setValueAtTime(580, now + 0.13);
+        g.gain.setValueAtTime(0.18, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
+        osc.start(now);
+        osc.stop(now + 0.27);
+        break;
+      }
+      case 'sunflower': {
+        [523.25, 659.25, 783.99].forEach(freq => {
+          const { osc, g } = createOscGain('triangle');
+          osc.frequency.setValueAtTime(freq, now);
+          g.gain.setValueAtTime(0.18, now);
+          g.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+          osc.start(now);
+          osc.stop(now + 0.46);
+        });
+        break;
+      }
+      case 'frog': {
+        const { osc, g } = createOscGain('sine');
+        osc.frequency.setValueAtTime(160, now);
+        osc.frequency.exponentialRampToValueAtTime(380, now + 0.1);
+        osc.frequency.exponentialRampToValueAtTime(140, now + 0.22);
+        g.gain.setValueAtTime(0.3, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+        osc.start(now);
+        osc.stop(now + 0.26);
+        break;
+      }
+      case 'dolphin': {
+        const { osc, g } = createOscGain('sine');
+        osc.frequency.setValueAtTime(700, now);
+        osc.frequency.exponentialRampToValueAtTime(1500, now + 0.08);
+        osc.frequency.exponentialRampToValueAtTime(900, now + 0.16);
+        g.gain.setValueAtTime(0.24, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+        osc.start(now);
+        osc.stop(now + 0.19);
+        break;
+      }
+      case 'boat': {
+        [440, 554.37].forEach(freq => {
+          const { osc, g } = createOscGain('triangle');
+          osc.frequency.setValueAtTime(freq, now);
+          g.gain.setValueAtTime(0.2, now);
+          g.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+          osc.start(now);
+          osc.stop(now + 0.4);
+        });
+        break;
+      }
+      case 'bubble': {
+        const { osc, g } = createOscGain('sine');
+        osc.frequency.setValueAtTime(320, now);
+        osc.frequency.exponentialRampToValueAtTime(880, now + 0.11);
+        g.gain.setValueAtTime(0.32, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        osc.start(now);
+        osc.stop(now + 0.16);
+        break;
+      }
+      case 'star':
+      case 'moon': {
+        const base = type === 'moon' ? 440 : 880;
+        const { osc, g } = createOscGain('sine');
+        osc.frequency.setValueAtTime(base, now);
+        g.gain.setValueAtTime(0.26, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+        osc.start(now);
+        osc.stop(now + 0.56);
+        break;
+      }
+      case 'rocket': {
+        const { osc, g } = createOscGain('triangle');
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.exponentialRampToValueAtTime(1100, now + 0.28);
+        g.gain.setValueAtTime(0.24, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        osc.start(now);
+        osc.stop(now + 0.32);
+        break;
+      }
+      case 'unicorn':
+      case 'fairy': {
+        const notes = [659.25, 783.99, 987.77, 1174.66, 1318.51];
+        notes.forEach((freq, i) => {
+          const t = now + i * 0.04;
+          const { osc, g } = createOscGain('sine');
+          osc.frequency.setValueAtTime(freq, t);
+          g.gain.setValueAtTime(0.18, t);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+          osc.start(t);
+          osc.stop(t + 0.3);
+        });
+        break;
+      }
+      default: {
+        const { osc, g } = createOscGain('triangle');
+        osc.frequency.setValueAtTime(523.25, now);
+        g.gain.setValueAtTime(0.28, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+        osc.start(now);
+        osc.stop(now + 0.26);
+        break;
+      }
+    }
+  }
+
+  toggleMute() {
+    this.isMuted = !this.isMuted;
+    if (this.masterGain && this.ctx) {
+      this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : 1.0, this.ctx.currentTime);
+    }
+    return this.isMuted;
+  }
+}
+
+const audio = new BabyAudioEngine();
+
+const canvas = document.getElementById('babyCanvas');
+const ctx = canvas.getContext('2d');
+
+let viewW = window.innerWidth;
+let viewH = window.innerHeight;
+
+function resizeCanvas() {
+  viewW = window.innerWidth;
+  viewH = window.innerHeight;
+  canvas.width = viewW;
+  canvas.height = viewH;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+let activeEmojis = [];
+let ripples = [];
+let wandTrails = [];
+let ambientFloatingIcons = [];
+let colorSparks = [];
+let themePopupElements = [];
+
+// Dynamic background ambient lighting effects
+let bgLightBursts = [];
+let collisionLightEffects = [];
+
+let isPaused = false;
+let pauseOnBlurEnabled = true;
+let moveStepCounter = 0;
+let emojiStepCounter = 0;
+let lastMoveSoundTime = 0;
+
+// Configurable interaction rates (1:5 to 1:25, default 1:10)
+let lightBurstInterval = 10;
+let emojiEmitInterval = 10;
+let landscapeMotionMode = 'gentle'; // 'gentle', 'calm', 'off'
+let landscapeScrollX = 0;
+
+// Configurable temporal rate limiters: Default to 3 per second (~333ms cooldown)
+let emojiRateLimitMs = 333;
+let lastEmojiPopTime = 0;
+let lightRateLimitMs = 333;
+let lastLightBurstTime = 0;
+
+// TODDLER SENSORY SOOTHER (AUTO-DESENSITIZATION)
+let sensoryDesensitizeEnabled = true;
+let desensitizeThreshold1 = 5;  // Stage 1: up to 5 interactions
+let desensitizeWindow2 = 10;     // Stage 2: next 10 interactions (total 15)
+let sensoryInteractionCount = 0;
+let lastElementalInteractionTime = 0;
+let elementalAttemptCounter = 0;
+
+function getDesensitizationTier() {
+  if (!sensoryDesensitizeEnabled) return 1;
+
+  // Natural recovery if child paused for more than 7.5 seconds
+  const now = performance.now();
+  if (lastElementalInteractionTime > 0 && now - lastElementalInteractionTime > 7500) {
+    const elapsedSecs = (now - lastElementalInteractionTime) / 1000;
+    const decaySteps = Math.floor(elapsedSecs - 7);
+    sensoryInteractionCount = Math.max(0, sensoryInteractionCount - decaySteps * 2);
+  }
+
+  if (sensoryInteractionCount < desensitizeThreshold1) {
+    return 1; // Normal 1:1
+  } else if (sensoryInteractionCount < desensitizeThreshold1 + desensitizeWindow2) {
+    return 3; // 1/3rd rate
+  } else {
+    return 6; // 1/6th rate
+  }
+}
+
+function updateSensoryBadgeUI() {
+  const tier = getDesensitizationTier();
+  const badge = document.getElementById('sensory-status-badge');
+  const icon = document.getElementById('sensory-badge-icon');
+  const text = document.getElementById('sensory-badge-text');
+  const lblCurrent = document.getElementById('lbl-desens-current');
+
+  if (tier === 1) {
+    badge.style.background = 'rgba(255, 255, 255, 0.9)';
+    badge.style.borderColor = '#a7f3d0';
+    badge.style.color = '#047857';
+    icon.textContent = '🌿';
+    text.textContent = 'Active (1:1)';
+    if (lblCurrent) lblCurrent.textContent = `🌿 Stage 1: Active Play (${sensoryInteractionCount}/${desensitizeThreshold1})`;
+  } else if (tier === 3) {
+    badge.style.background = '#fef3c7';
+    badge.style.borderColor = '#fde68a';
+    badge.style.color = '#b45309';
+    icon.textContent = '🍃';
+    text.textContent = 'Soothing (1/3)';
+    if (lblCurrent) lblCurrent.textContent = `🍃 Stage 2: Gentle Soothing (1/3rd Rate, ${sensoryInteractionCount}/${desensitizeThreshold1 + desensitizeWindow2})`;
+  } else {
+    badge.style.background = '#ede9fe';
+    badge.style.borderColor = '#ddd6fe';
+    badge.style.color = '#6d28d9';
+    icon.textContent = '🌙';
+    text.textContent = 'Deep Calm (1/6)';
+    if (lblCurrent) lblCurrent.textContent = `🌙 Stage 3: Deep Calm (1/6th Rate, ${sensoryInteractionCount} Hits)`;
+  }
+}
+
+let customBgImage = null;
+let currentThemeKey = 'pastel_sky';
+let currentEmojiPackKey = 'animals';
+let extraLargeMode = true;
+let calmDensityMode = true;
+let gyroEnabled = true;
+
+const wands = [
+  { x: viewW * 0.35, y: viewH * 0.5, icon: '🌟', color: '#ff6b8b', active: false },
+  { x: viewW * 0.65, y: viewH * 0.5, icon: '💖', color: '#6bc5ff', active: false }
+];
+
+class ThemedInteractiveElement {
+  constructor(def, index, total) {
+    this.emoji = def.emoji;
+    this.name = def.name;
+    this.sound = def.sound;
+    this.color = def.color;
+
+    const colWidth = (viewW - 160) / Math.max(1, total);
+    this.x = 80 + colWidth * index + (Math.random() - 0.5) * 40;
+    this.y = viewH * 0.25 + (index % 2) * (viewH * 0.38) + (Math.random() - 0.5) * 50;
+
+    this.baseRadius = 38;
+    this.radius = this.baseRadius;
+    this.scale = 1.0;
+    this.targetScale = 1.0;
+    this.bobPhase = Math.random() * Math.PI * 2;
+    this.wiggle = 0;
+
+    this.vx = (Math.random() - 0.5) * 0.4;
+    this.vy = (Math.random() - 0.5) * 0.3;
+
+    this.hoverCooldown = 0;
+    this.labelAlpha = 0;
+  }
+
+  update() {
+    this.bobPhase += 0.04;
+    this.x += this.vx + Math.cos(this.bobPhase * 0.7) * 0.3;
+    this.y += this.vy + Math.sin(this.bobPhase) * 0.4;
+
+    const margin = 60;
+    if (this.x < margin) { this.x = margin; this.vx *= -1; }
+    if (this.x > viewW - margin) { this.x = viewW - margin; this.vx *= -1; }
+    if (this.y < margin + 40) { this.y = margin + 40; this.vy *= -1; }
+    if (this.y > viewH - margin - 40) { this.y = viewH - margin - 40; this.vy *= -1; }
+
+    this.scale += (this.targetScale - this.scale) * 0.16;
+    this.targetScale += (1.0 - this.targetScale) * 0.1;
+    this.wiggle *= 0.88;
+
+    if (this.hoverCooldown > 0) this.hoverCooldown--;
+    if (this.labelAlpha > 0) this.labelAlpha -= 0.02;
+  }
+
+  triggerHover(triggerX, triggerY) {
+    if (isPaused) return;
+    if (this.hoverCooldown > 0) return;
+
+    // Check Auto-Desensitization tier
+    const tier = getDesensitizationTier();
+    elementalAttemptCounter++;
+
+    // Base debounce scaled by desensitization tier (1x = ~45 frames, 3x = ~135 frames, 6x = ~270 frames)
+    this.hoverCooldown = 45 * tier;
+
+    // Throttle interaction response according to tier (1/1, 1/3, or 1/6)
+    if (tier > 1 && elementalAttemptCounter % tier !== 0) {
+      // Gentle visual bump without loud sound/shockwaves
+      this.targetScale = 1.15;
+      return;
+    }
+
+    sensoryInteractionCount++;
+    lastElementalInteractionTime = performance.now();
+    updateSensoryBadgeUI();
+
+    this.targetScale = tier === 1 ? 1.45 : (tier === 3 ? 1.3 : 1.18);
+    this.wiggle = (Math.random() > 0.5 ? 1 : -1) * (0.35 / Math.sqrt(tier));
+    this.labelAlpha = 1.0;
+
+    audio.playThemedElementSound(this.sound);
+    spawnColorBurst(this.x, this.y, Math.max(3, Math.round(10 / tier)));
+    spawnCollisionLightEffect(this.x, this.y, this.color);
+  }
+
+  draw(targetCtx) {
+    targetCtx.save();
+    targetCtx.translate(this.x, this.y);
+    targetCtx.rotate(this.wiggle);
+    targetCtx.scale(this.scale, this.scale);
+
+    targetCtx.beginPath();
+    targetCtx.arc(0, 0, this.radius, 0, Math.PI * 2);
+    targetCtx.fillStyle = 'rgba(255, 255, 255, 0.88)';
+    targetCtx.shadowColor = this.color;
+    targetCtx.shadowBlur = 14;
+    targetCtx.fill();
+
+    targetCtx.lineWidth = 3.5;
+    targetCtx.strokeStyle = this.color;
+    targetCtx.stroke();
+
+    targetCtx.shadowBlur = 0;
+    targetCtx.font = '36px sans-serif';
+    targetCtx.textAlign = 'center';
+    targetCtx.textBaseline = 'middle';
+    targetCtx.fillText(this.emoji, 0, 2);
+
+    if (this.labelAlpha > 0) {
+      targetCtx.font = 'bold 15px sans-serif';
+      targetCtx.fillStyle = '#1e293b';
+      targetCtx.globalAlpha = Math.max(0, this.labelAlpha);
+      targetCtx.fillText(`✨ ${this.name}!`, 0, -this.radius - 14);
+    }
+
+    targetCtx.restore();
+  }
+}
+
+function initThemeElements() {
+  themePopupElements = [];
+  const list = THEME_ELEMENTS[currentThemeKey] || THEME_ELEMENTS.pastel_sky;
+  list.forEach((def, idx) => {
+    themePopupElements.push(new ThemedInteractiveElement(def, idx, list.length));
+  });
+}
+
+function initAmbientIcons() {
+  ambientFloatingIcons = [];
+  const theme = THEMES[currentThemeKey];
+  const ambientCount = calmDensityMode ? 6 : 12;
+  for (let i = 0; i < ambientCount; i++) {
+    ambientFloatingIcons.push({
+      x: Math.random() * viewW,
+      y: Math.random() * viewH,
+      vy: -0.25 - Math.random() * 0.25,
+      vx: (Math.random() - 0.5) * 0.2,
+      size: 20 + Math.random() * 16,
+      icon: theme.ambient,
+      alpha: 0.2 + Math.random() * 0.2
+    });
+  }
+}
+initAmbientIcons();
+initThemeElements();
+
+function spawnColorBurst(x, y, sparkCount = 10) {
+  for (let i = 0; i < sparkCount; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 4 + 2;
+    colorSparks.push({
+      x: x,
+      y: y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      color: POP_COLORS[Math.floor(Math.random() * POP_COLORS.length)],
+      radius: Math.random() * 4 + 3,
+      alpha: 1.0,
+      decay: 0.02 + Math.random() * 0.02
+    });
+  }
+  if (colorSparks.length > 35) colorSparks.splice(0, colorSparks.length - 35);
+}
+
+// Background light flash for movement events (rate-limited)
+function spawnBackgroundLightBurst(x, y, color = null, bypassLimit = false) {
+  const now = performance.now();
+  if (!bypassLimit && (now - lastLightBurstTime < lightRateLimitMs)) {
+    return;
+  }
+  lastLightBurstTime = now;
+
+  const chosenColor = color || POP_COLORS[Math.floor(Math.random() * POP_COLORS.length)];
+  bgLightBursts.push({
+    x,
+    y,
+    color: chosenColor,
+    radius: 30,
+    maxRadius: Math.max(viewW, viewH) * 0.48,
+    alpha: 0.55,
+    decay: 0.022
+  });
+  if (bgLightBursts.length > 5) bgLightBursts.shift();
+}
+
+// Expansive background light glow when colliding with theme bubbles
+function spawnCollisionLightEffect(x, y, color = '#ffd166') {
+  collisionLightEffects.push({
+    x,
+    y,
+    color: color,
+    radius: 40,
+    maxRadius: Math.max(viewW, viewH) * 0.72,
+    alpha: 0.72,
+    decay: 0.016
+  });
+  if (collisionLightEffects.length > 4) collisionLightEffects.shift();
+}
+
+function hexToRgba(hex, alpha) {
+  let c = hex.replace('#', '');
+  if (c.length === 3) c = c.split('').map(x => x + x).join('');
+  const num = parseInt(c, 16);
+  const r = (num >> 16) & 255;
+  const g = (num >> 8) & 255;
+  const b = num & 255;
+  return `rgba(${r}, ${g}, ${b}, ${Math.max(0, Math.min(1, alpha))})`;
+}
+
+function spawnEmojiPop(x, y, count = 1, iconOverride = null, bypassLimit = false) {
+  const now = performance.now();
+  if (!bypassLimit && (now - lastEmojiPopTime < emojiRateLimitMs)) {
+    return;
+  }
+  lastEmojiPopTime = now;
+
+  const pack = EMOJI_SETS[currentEmojiPackKey] || EMOJI_SETS.animals;
+  const baseSize = extraLargeMode ? 74 : 52;
+  const safeCount = Math.min(count, calmDensityMode ? 2 : 3);
+
+  for (let i = 0; i < safeCount; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 4 + 2.5;
+    const emoji = iconOverride || pack[Math.floor(Math.random() * pack.length)];
+
+    activeEmojis.push({
+      x: x + (Math.random() - 0.5) * 16,
+      y: y + (Math.random() - 0.5) * 16,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 2.2,
+      emoji: emoji,
+      size: baseSize * (0.85 + Math.random() * 0.3),
+      rotation: (Math.random() - 0.5) * 0.3,
+      rotSpeed: (Math.random() - 0.5) * 0.04,
+      scale: 0.1,
+      targetScale: 1.0,
+      alpha: 1.0,
+      decay: 0.009 + Math.random() * 0.006
+    });
+  }
+
+  if (activeEmojis.length > 10) activeEmojis.splice(0, activeEmojis.length - 10);
+
+  ripples.push({
+    x: x,
+    y: y,
+    radius: 12,
+    maxRadius: extraLargeMode ? 130 : 85,
+    color: POP_COLORS[Math.floor(Math.random() * POP_COLORS.length)],
+    alpha: 0.8
+  });
+  if (ripples.length > 8) ripples.shift();
+
+  spawnColorBurst(x, y, calmDensityMode ? 8 : 14);
+  audio.playJoyEffect();
+}
+
+let gyroX = 0;
+let gyroY = 0;
+let hasMotionSensor = false;
+
+window.addEventListener('deviceorientation', (e) => {
+  if (!gyroEnabled) return;
+  if (e.gamma !== null && e.beta !== null) {
+    hasMotionSensor = true;
+    gyroX = Math.max(-1, Math.min(1, (e.gamma || 0) / 30));
+    gyroY = Math.max(-1, Math.min(1, ((e.beta || 0) - 45) / 30));
+  }
+});
+
+let gamepadsConnected = false;
+const gamepadHistory = [
+  { prevButtons: {}, moveCooldown: 0 },
+  { prevButtons: {}, moveCooldown: 0 }
+];
+
+window.addEventListener('gamepadconnected', () => {
+  audio.init();
+  updateGamepadStatus();
+  spawnEmojiPop(viewW / 2, viewH / 2, 2, '🎮');
+});
+
+window.addEventListener('gamepaddisconnected', () => {
+  updateGamepadStatus();
+});
+
+function updateGamepadStatus() {
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  const activePads = Array.from(pads).filter(p => p !== null && p.connected);
+
+  const dot = document.getElementById('dot-indicator');
+  const label = document.getElementById('gamepad-label');
+
+  if (activePads.length > 0) {
+    gamepadsConnected = true;
+    dot.classList.add('connected');
+    label.textContent = `🎮 ${activePads.length} Joystick${activePads.length > 1 ? 's' : ''} Ready!`;
+  } else {
+    gamepadsConnected = false;
+    dot.classList.remove('connected');
+    label.textContent = hasMotionSensor
+      ? `📱 Tilt Device or Touch Screen`
+      : `🎮 Connect Joystick or Touch Screen`;
+  }
+}
+
+let moveTrailThrottle = 0;
+function pollGamepads() {
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+
+  for (let pIdx = 0; pIdx < Math.min(2, pads.length); pIdx++) {
+    const pad = pads[pIdx];
+    if (!pad || !pad.connected) continue;
+
+    const wand = wands[pIdx];
+    const hist = gamepadHistory[pIdx];
+    wand.active = true;
+
+    const DEADZONE = 0.18;
+    let dx = 0;
+    let dy = 0;
+
+    const stickX = Math.abs(pad.axes[0] || 0) > DEADZONE ? pad.axes[0] : (Math.abs(pad.axes[2] || 0) > DEADZONE ? pad.axes[2] : 0);
+    const stickY = Math.abs(pad.axes[1] || 0) > DEADZONE ? pad.axes[1] : (Math.abs(pad.axes[3] || 0) > DEADZONE ? pad.axes[3] : 0);
+
+    let padGyroX = 0;
+    let padGyroY = 0;
+    if (gyroEnabled && pad.axes.length >= 6) {
+      if (Math.abs(pad.axes[4] || 0) > 0.08) padGyroX = pad.axes[4];
+      if (Math.abs(pad.axes[5] || 0) > 0.08) padGyroY = pad.axes[5];
+    }
+
+    if (pad.buttons[14]?.pressed) dx -= 1;
+    if (pad.buttons[15]?.pressed) dx += 1;
+    if (pad.buttons[12]?.pressed) dy -= 1;
+    if (pad.buttons[13]?.pressed) dy += 1;
+
+    dx += stickX + padGyroX * 1.2;
+    dy += stickY + padGyroY * 1.2;
+
+    const stickMag = Math.hypot(dx, dy);
+
+    if (stickMag > 0.14) {
+      audio.init();
+      const speed = 11 * Math.min(stickMag, 1.0);
+      wand.x = Math.max(50, Math.min(viewW - 50, wand.x + dx * speed));
+      wand.y = Math.max(50, Math.min(viewH - 50, wand.y + dy * speed));
+
+      moveTrailThrottle++;
+      if (moveTrailThrottle % 4 === 0) {
+        if (wandTrails.length > 18) wandTrails.shift();
+        wandTrails.push({
+          x: wand.x,
+          y: wand.y,
+          color: wand.color,
+          size: extraLargeMode ? 16 : 10,
+          alpha: 0.65,
+          icon: Math.random() < 0.2 ? '✨' : null
+        });
+      }
+
+      handleMovementFeedback(wand.x, wand.y, wand.color);
+    }
+
+    pad.buttons.forEach((btn, bIdx) => {
+      const isPressed = btn.pressed || btn.value > 0.4;
+      const wasPressed = hist.prevButtons[bIdx];
+
+      if (isPressed && !wasPressed) {
+        audio.init();
+        spawnEmojiPop(wand.x, wand.y, extraLargeMode ? 2 : 1);
+        if (pad.vibrationActuator && typeof pad.vibrationActuator.playEffect === 'function') {
+          pad.vibrationActuator.playEffect('dual-rumble', {
+            startDelay: 0,
+            duration: 100,
+            weakMagnitude: 0.35,
+            strongMagnitude: 0.2
+          }).catch(() => {});
+        }
+      }
+      hist.prevButtons[bIdx] = isPressed;
+    });
+  }
+
+  // Device orientation motion fallback
+  if (gyroEnabled && hasMotionSensor && (Math.abs(gyroX) > 0.1 || Math.abs(gyroY) > 0.1)) {
+    audio.init();
+    const wand = wands[0];
+    wand.active = true;
+    wand.x = Math.max(50, Math.min(viewW - 50, wand.x + gyroX * 8));
+    wand.y = Math.max(50, Math.min(viewH - 50, wand.y + gyroY * 8));
+
+    handleMovementFeedback(wand.x, wand.y, wand.color);
+  }
+}
+
+function handleMovementFeedback(x, y, color) {
+  // 1. Configurable Emoji Emission (1:1 to 1:10)
+  emojiStepCounter++;
+  if (emojiStepCounter % emojiEmitInterval === 0) {
+    spawnEmojiPop(x, y, 1);
+  }
+
+  const now = performance.now();
+  if (now - lastMoveSoundTime > 95) {
+    audio.playMoveChime();
+    lastMoveSoundTime = now;
+  }
+
+  // 2. Configurable Movement Light Bursts (1:1 to 1:10)
+  moveStepCounter++;
+  if (moveStepCounter % lightBurstInterval === 0) {
+    spawnBackgroundLightBurst(x, y, color);
+  }
+}
+
+let pointerMoveThrottle = 0;
+function handleTouchOrMouse(e) {
+  if (isPaused) return;
+  audio.init();
+  const touches = e.touches ? Array.from(e.touches) : [e];
+  touches.forEach(t => {
+    spawnEmojiPop(t.clientX, t.clientY, 1);
+    wands[0].x = t.clientX;
+    wands[0].y = t.clientY;
+    wands[0].active = true;
+  });
+}
+
+window.addEventListener('pointerdown', (e) => {
+  if (e.target.closest('#top-bar') || e.target.closest('#settings-modal') || e.target.closest('#pause-overlay')) return;
+  handleTouchOrMouse(e);
+});
+
+window.addEventListener('pointermove', (e) => {
+  if (isPaused) return;
+  if (e.target.closest('#top-bar') || e.target.closest('#settings-modal') || e.target.closest('#pause-overlay')) return;
+  audio.init();
+
+  wands[0].x = e.clientX;
+  wands[0].y = e.clientY;
+  wands[0].active = true;
+
+  handleMovementFeedback(e.clientX, e.clientY, wands[0].color);
+
+  pointerMoveThrottle++;
+  if (pointerMoveThrottle % 3 === 0) {
+    if (wandTrails.length > 18) wandTrails.shift();
+    wandTrails.push({
+      x: e.clientX,
+      y: e.clientY,
+      color: wands[0].color,
+      size: extraLargeMode ? 16 : 10,
+      alpha: 0.6,
+      icon: null
+    });
+  }
+});
+
+function drawPassingLandscape() {
+  if (landscapeMotionMode === 'off') return;
+
+  const speed = landscapeMotionMode === 'calm' ? 0.35 : 0.85;
+  landscapeScrollX += speed;
+
+  const t = THEMES[currentThemeKey] || THEMES.pastel_sky;
+
+  ctx.save();
+
+  // LAYER 1: Distant rolling horizon hills / soft wave shapes
+  const hillBaseY = viewH * 0.72;
+  const hillAmplitude1 = viewH * 0.08;
+  const hillWavelength1 = viewW * 0.8;
+  const offset1 = landscapeScrollX * 0.45;
+
+  ctx.beginPath();
+  ctx.moveTo(0, viewH);
+  for (let x = 0; x <= viewW + 20; x += 25) {
+    const y = hillBaseY + Math.sin((x + offset1) / hillWavelength1 * Math.PI * 2) * hillAmplitude1;
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(viewW, viewH);
+  ctx.closePath();
+
+  // Distant pastel tint
+  ctx.fillStyle = currentThemeKey === 'starry_night'
+    ? 'rgba(49, 46, 129, 0.45)'
+    : (currentThemeKey === 'ocean' ? 'rgba(186, 230, 253, 0.5)' : 'rgba(255, 255, 255, 0.28)');
+  ctx.fill();
+
+  // LAYER 2: Gentle closer rolling meadows / dunes / seabed
+  const hillBaseY2 = viewH * 0.82;
+  const hillAmplitude2 = viewH * 0.06;
+  const hillWavelength2 = viewW * 0.55;
+  const offset2 = landscapeScrollX * 0.95;
+
+  ctx.beginPath();
+  ctx.moveTo(0, viewH);
+  for (let x = 0; x <= viewW + 20; x += 20) {
+    const y = hillBaseY2 + Math.cos((x + offset2) / hillWavelength2 * Math.PI * 2) * hillAmplitude2;
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(viewW, viewH);
+  ctx.closePath();
+
+  ctx.fillStyle = currentThemeKey === 'starry_night'
+    ? 'rgba(30, 27, 75, 0.65)'
+    : (currentThemeKey === 'meadow' ? 'rgba(167, 243, 208, 0.55)' : 'rgba(255, 255, 255, 0.42)');
+  ctx.fill();
+
+  // LAYER 3: Gentle storybook landscape decor drifting across the ground
+  const decorSpacing = viewW * 0.42;
+  const decorIcons = currentThemeKey === 'meadow'
+    ? ['🌷', '🌼', '🍄', '🌱']
+    : (currentThemeKey === 'starry_night'
+      ? ['⭐', '✨', '🪐', '🌟']
+      : (currentThemeKey === 'ocean' ? ['🪸', '🐚', '🫧', '🌿'] : ['🌸', '🎈', '🌼', '✨']));
+
+  ctx.font = '24px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  for (let i = -1; i < 4; i++) {
+    const rawX = (i * decorSpacing) - (offset2 % decorSpacing);
+    const icon = decorIcons[Math.abs(i) % decorIcons.length];
+    const decorY = hillBaseY2 + Math.cos((rawX + offset2) / hillWavelength2 * Math.PI * 2) * hillAmplitude2 - 12;
+
+    if (rawX >= -30 && rawX <= viewW + 30) {
+      ctx.globalAlpha = 0.65;
+      ctx.fillText(icon, rawX, decorY);
+    }
+  }
+
+  ctx.restore();
+}
+
+function drawBackground() {
+  if (customBgImage) {
+    // Gentle panning drift for custom uploaded picture
+    if (landscapeMotionMode !== 'off') {
+      landscapeScrollX += landscapeMotionMode === 'calm' ? 0.25 : 0.6;
+    }
+    const panOffset = (Math.sin(landscapeScrollX * 0.008) * 0.05);
+    const drawW = viewW * 1.1;
+    const drawH = viewH * 1.1;
+    const startX = -viewW * 0.05 + panOffset * viewW;
+    const startY = -viewH * 0.05;
+
+    ctx.drawImage(customBgImage, startX, startY, drawW, drawH);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+    ctx.fillRect(0, 0, viewW, viewH);
+  } else {
+    const theme = THEMES[currentThemeKey] || THEMES.pastel_sky;
+    const grad = ctx.createLinearGradient(0, 0, 0, viewH);
+    grad.addColorStop(0, theme.c1);
+    grad.addColorStop(1, theme.c2);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, viewW, viewH);
+  }
+
+  // Draw smooth passing landscape simulation
+  drawPassingLandscape();
+
+  // Draw movement background light bursts
+  for (let i = bgLightBursts.length - 1; i >= 0; i--) {
+    const b = bgLightBursts[i];
+    b.radius += 14;
+    b.alpha -= b.decay;
+    if (b.alpha <= 0) {
+      bgLightBursts.splice(i, 1);
+      continue;
+    }
+    ctx.save();
+    const grad = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.radius);
+    grad.addColorStop(0, hexToRgba(b.color, b.alpha * 0.75));
+    grad.addColorStop(0.55, hexToRgba('#ffffff', b.alpha * 0.35));
+    grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, viewW, viewH);
+    ctx.restore();
+  }
+
+  // Draw collision background light effects
+  for (let i = collisionLightEffects.length - 1; i >= 0; i--) {
+    const c = collisionLightEffects[i];
+    c.radius += 16;
+    c.alpha -= c.decay;
+    if (c.alpha <= 0) {
+      collisionLightEffects.splice(i, 1);
+      continue;
+    }
+    ctx.save();
+    const grad = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, c.radius);
+    grad.addColorStop(0, hexToRgba('#ffffff', c.alpha * 0.85));
+    grad.addColorStop(0.35, hexToRgba(c.color, c.alpha * 0.65));
+    grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, viewW, viewH);
+    ctx.restore();
+  }
+
+  for (const item of ambientFloatingIcons) {
+    ctx.font = `${item.size}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.globalAlpha = item.alpha;
+    ctx.fillText(item.icon, item.x, item.y);
+  }
+  ctx.globalAlpha = 1.0;
+}
+
+function updateAndRender() {
+  if (isPaused) {
+    requestAnimationFrame(updateAndRender);
+    return;
+  }
+
+  pollGamepads();
+  drawBackground();
+
+  for (const item of ambientFloatingIcons) {
+    item.y += item.vy;
+    item.x += item.vx;
+    if (item.y < -40) {
+      item.y = viewH + 40;
+      item.x = Math.random() * viewW;
+    }
+  }
+
+  themePopupElements.forEach(elem => {
+    elem.update();
+    wands.forEach(w => {
+      if (!w.active) return;
+      const dist = Math.hypot(w.x - elem.x, w.y - elem.y);
+      if (dist < elem.radius + 32) {
+        elem.triggerHover(w.x, w.y);
+      }
+    });
+    elem.draw(ctx);
+  });
+
+  for (let i = ripples.length - 1; i >= 0; i--) {
+    const r = ripples[i];
+    r.radius += 3.2;
+    r.alpha -= 0.024;
+    if (r.alpha <= 0) {
+      ripples.splice(i, 1);
+      continue;
+    }
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
+    ctx.strokeStyle = r.color;
+    ctx.lineWidth = 3.5;
+    ctx.globalAlpha = Math.max(0, r.alpha);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  for (let i = colorSparks.length - 1; i >= 0; i--) {
+    const sp = colorSparks[i];
+    sp.x += sp.vx;
+    sp.y += sp.vy;
+    sp.vx *= 0.94;
+    sp.vy *= 0.94;
+    sp.alpha -= sp.decay;
+    if (sp.alpha <= 0) {
+      colorSparks.splice(i, 1);
+      continue;
+    }
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(sp.x, sp.y, sp.radius, 0, Math.PI * 2);
+    ctx.fillStyle = sp.color;
+    ctx.globalAlpha = Math.max(0, sp.alpha);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  for (let i = wandTrails.length - 1; i >= 0; i--) {
+    const t = wandTrails[i];
+    t.alpha -= 0.04;
+    t.size *= 0.95;
+    if (t.alpha <= 0) {
+      wandTrails.splice(i, 1);
+      continue;
+    }
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, t.alpha);
+    if (t.icon) {
+      ctx.font = `${t.size}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(t.icon, t.x, t.y);
+    } else {
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, t.size / 2, 0, Math.PI * 2);
+      ctx.fillStyle = t.color;
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  for (let i = activeEmojis.length - 1; i >= 0; i--) {
+    const em = activeEmojis[i];
+    em.x += em.vx;
+    em.y += em.vy;
+    em.rotation += em.rotSpeed;
+    em.scale += (em.targetScale - em.scale) * 0.15;
+    em.alpha -= em.decay;
+
+    if (em.alpha <= 0) {
+      activeEmojis.splice(i, 1);
+      continue;
+    }
+
+    ctx.save();
+    ctx.translate(em.x, em.y);
+    ctx.rotate(em.rotation);
+    ctx.scale(em.scale, em.scale);
+    ctx.globalAlpha = Math.max(0, em.alpha);
+    ctx.font = `${em.size}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(em.emoji, 0, 0);
+    ctx.restore();
+  }
+
+  wands.forEach((w, idx) => {
+    if (!w.active) return;
+    ctx.save();
+    ctx.translate(w.x, w.y);
+    ctx.beginPath();
+    ctx.arc(0, 0, 28, 0, Math.PI * 2);
+    ctx.fillStyle = idx === 0 ? 'rgba(255, 107, 139, 0.28)' : 'rgba(107, 197, 255, 0.28)';
+    ctx.fill();
+
+    ctx.font = '32px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(w.icon, 0, 0);
+    ctx.restore();
+  });
+
+  requestAnimationFrame(updateAndRender);
+}
+
+const modal = document.getElementById('settings-modal');
+const btnParentConfig = document.getElementById('btn-parent-config');
+const btnCloseModal = document.getElementById('btn-close-modal');
+const btnSaveModal = document.getElementById('btn-save-modal');
+const btnAudioToggle = document.getElementById('btn-audio-toggle');
+const btnPauseToggle = document.getElementById('btn-pause-toggle');
+const pauseOverlay = document.getElementById('pause-overlay');
+const btnResumeOverlay = document.getElementById('btn-resume-overlay');
+
+function setGamePaused(state) {
+  isPaused = state;
+  pauseOverlay.style.display = isPaused ? 'flex' : 'none';
+  btnPauseToggle.textContent = isPaused ? '▶️' : '⏸️';
+
+  if (isPaused) {
+    audio.pauseMusic();
+  } else {
+    audio.init();
+    audio.resumeMusic();
+  }
+}
+
+btnPauseToggle.addEventListener('click', () => {
+  setGamePaused(!isPaused);
+});
+
+btnResumeOverlay.addEventListener('click', () => {
+  setGamePaused(false);
+});
+
+pauseOverlay.addEventListener('click', (e) => {
+  if (e.target === pauseOverlay) setGamePaused(false);
+});
+
+// Esc key toggles pause
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' || e.code === 'Escape') {
+    if (modal.style.display === 'flex') {
+      modal.style.display = 'none';
+      return;
+    }
+    setGamePaused(!isPaused);
+  }
+});
+
+// Window focus loss (blur) - configurable
+window.addEventListener('blur', () => {
+  if (pauseOnBlurEnabled && !isPaused && modal.style.display !== 'flex') {
+    setGamePaused(true);
+  }
+});
+
+btnParentConfig.addEventListener('click', () => {
+  audio.init();
+  modal.style.display = 'flex';
+});
+
+btnCloseModal.addEventListener('click', () => { modal.style.display = 'none'; });
+btnSaveModal.addEventListener('click', () => { modal.style.display = 'none'; });
+
+btnAudioToggle.addEventListener('click', () => {
+  audio.init();
+  const isMuted = audio.toggleMute();
+  btnAudioToggle.textContent = isMuted ? '🔇' : '🎵';
+});
+
+document.getElementById('cfg-melody').addEventListener('change', (e) => {
+  audio.melodyType = e.target.value;
+  audio.noteIndex = 0;
+});
+
+document.getElementById('cfg-music-vol').addEventListener('input', (e) => {
+  audio.musicVol = parseInt(e.target.value, 10) / 100;
+  if (audio.musicGain && audio.ctx) {
+    audio.musicGain.gain.setValueAtTime(audio.musicVol, audio.ctx.currentTime);
+  }
+});
+
+document.getElementById('cfg-tempo').addEventListener('change', (e) => {
+  const val = e.target.value;
+  if (val === 'very_slow') audio.tempoInterval = 1100;
+  else if (val === 'playful') audio.tempoInterval = 520;
+  else audio.tempoInterval = 780;
+});
+
+document.getElementById('cfg-density').addEventListener('change', (e) => {
+  calmDensityMode = e.target.value === 'calm';
+  initAmbientIcons();
+});
+
+document.getElementById('cfg-landscape-motion').addEventListener('change', (e) => {
+  landscapeMotionMode = e.target.value;
+});
+
+const emojiRateSlider = document.getElementById('cfg-emoji-rate');
+const emojiRateLabel = document.getElementById('lbl-emoji-rate');
+emojiRateSlider.addEventListener('input', (e) => {
+  emojiEmitInterval = parseInt(e.target.value, 10);
+  emojiRateLabel.textContent = `1:${emojiEmitInterval}${emojiEmitInterval === 10 ? ' (Default)' : ''}`;
+});
+
+const lightRateSlider = document.getElementById('cfg-light-rate');
+const lightRateLabel = document.getElementById('lbl-light-rate');
+lightRateSlider.addEventListener('input', (e) => {
+  lightBurstInterval = parseInt(e.target.value, 10);
+  lightRateLabel.textContent = `1:${lightBurstInterval}${lightBurstInterval === 10 ? ' (Default)' : ''}`;
+});
+
+const emojiLimitSlider = document.getElementById('cfg-emoji-limit');
+const emojiLimitLabel = document.getElementById('lbl-emoji-limit');
+emojiLimitSlider.addEventListener('input', (e) => {
+  emojiRateLimitMs = parseInt(e.target.value, 10);
+  const perSec = (1000 / emojiRateLimitMs).toFixed(1);
+  const isDefault = Math.abs(emojiRateLimitMs - 333) <= 10;
+  emojiLimitLabel.textContent = `${emojiRateLimitMs}ms (~${perSec}/s${isDefault ? ' - Default' : ''})`;
+});
+
+const lightLimitSlider = document.getElementById('cfg-light-limit');
+const lightLimitLabel = document.getElementById('lbl-light-limit');
+lightLimitSlider.addEventListener('input', (e) => {
+  lightRateLimitMs = parseInt(e.target.value, 10);
+  const perSec = (1000 / lightRateLimitMs).toFixed(1);
+  const isDefault = Math.abs(lightRateLimitMs - 333) <= 10;
+  lightLimitLabel.textContent = `${lightRateLimitMs}ms (~${perSec}/s${isDefault ? ' - Default' : ''})`;
+});
+
+document.getElementById('cfg-desensitize-toggle').addEventListener('change', (e) => {
+  sensoryDesensitizeEnabled = e.target.value === 'on';
+  updateSensoryBadgeUI();
+});
+
+const desensT1Slider = document.getElementById('cfg-desens-t1');
+const desensT1Label = document.getElementById('lbl-desens-t1');
+desensT1Slider.addEventListener('input', (e) => {
+  desensitizeThreshold1 = parseInt(e.target.value, 10);
+  desensT1Label.textContent = `${desensitizeThreshold1} Touches${desensitizeThreshold1 === 5 ? ' (Default)' : ''}`;
+  updateSensoryBadgeUI();
+});
+
+const desensT2Slider = document.getElementById('cfg-desens-t2');
+const desensT2Label = document.getElementById('lbl-desens-t2');
+desensT2Slider.addEventListener('input', (e) => {
+  desensitizeWindow2 = parseInt(e.target.value, 10);
+  desensT2Label.textContent = `${desensitizeWindow2} Touches${desensitizeWindow2 === 10 ? ' (Default)' : ''}`;
+  updateSensoryBadgeUI();
+});
+
+document.getElementById('cfg-blur-pause').addEventListener('change', (e) => {
+  pauseOnBlurEnabled = e.target.value === 'on';
+});
+
+document.getElementById('cfg-gyro').addEventListener('change', (e) => {
+  gyroEnabled = e.target.value === 'on';
+});
+
+document.querySelectorAll('.theme-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentThemeKey = btn.dataset.theme;
+    customBgImage = null;
+    initAmbientIcons();
+    initThemeElements();
+  });
+});
+
+document.getElementById('cfg-bg-upload').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    const img = new Image();
+    img.onload = () => { customBgImage = img; };
+    img.src = event.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById('cfg-emoji-pack').addEventListener('change', (e) => {
+  currentEmojiPackKey = e.target.value;
+});
+
+document.getElementById('cfg-sfx-type').addEventListener('change', (e) => {
+  audio.sfxStyle = e.target.value;
+});
+
+// Sound unlock banner click listener
+const soundBanner = document.getElementById('sound-banner');
+if (soundBanner) {
+  soundBanner.addEventListener('click', () => {
+    audio.init();
+  });
+}
+
+// Global immediate audio unlock on any user gesture across window
+['pointerdown', 'touchstart', 'mousedown', 'keydown'].forEach(evtType => {
+  window.addEventListener(evtType, () => {
+    audio.init();
+  }, { passive: true });
+});
+
+window.addEventListener('DOMContentLoaded', () => {
+  updateSensoryBadgeUI();
+  requestAnimationFrame(updateAndRender);
+});
+</script>
+</body>
+</html>
